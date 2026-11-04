@@ -1,0 +1,42 @@
+# Renders the README demos (all palettes) and checks the action itself still works.
+name: Demo
+
+on:
+  schedule:
+    - cron: "0 0 * * *"
+  workflow_dispatch:
+  push:
+    branches: [main]
+
+permissions:
+  contents: write
+
+jobs:
+  demo:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - name: Render every palette
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: |
+          for palette in seasons gold rainbow; do
+            python3 fireworks.py "$GITHUB_REPOSITORY_OWNER" "dist/$palette" --palette "$palette"
+          done
+      - name: Push to output
+        working-directory: dist
+        run: |
+          git init -q -b output
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git commit -qm "Update demos"
+          git push -qf "https://x-access-token:${{ github.token }}@github.com/${GITHUB_REPOSITORY}.git" output
+
+  action:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: ./
+        with:
+          output_branch: action-test

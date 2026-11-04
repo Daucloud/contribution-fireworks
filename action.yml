@@ -1,0 +1,49 @@
+name: Contribution Fireworks
+description: Turn your GitHub contribution calendar into an animated fireworks show for your profile README
+author: Daucloud
+branding:
+  icon: star
+  color: orange
+
+inputs:
+  github_user_name:
+    description: Whose contributions to draw. Defaults to the repository owner.
+    required: false
+    default: ${{ github.repository_owner }}
+  palette:
+    description: "Color palette: seasons, gold or rainbow."
+    required: false
+    default: seasons
+  output_branch:
+    description: Branch the SVGs are pushed to. It is overwritten on every run.
+    required: false
+    default: output
+  github_token:
+    description: Token used to read the contribution calendar and push the SVGs.
+    required: false
+    default: ${{ github.token }}
+
+runs:
+  using: composite
+  steps:
+    - name: Render fireworks
+      shell: bash
+      env:
+        GITHUB_TOKEN: ${{ inputs.github_token }}
+        USER_NAME: ${{ inputs.github_user_name }}
+        PALETTE: ${{ inputs.palette }}
+      run: python3 "$GITHUB_ACTION_PATH/fireworks.py" "$USER_NAME" "$RUNNER_TEMP/fireworks" --palette "$PALETTE"
+
+    - name: Push to ${{ inputs.output_branch }}
+      shell: bash
+      env:
+        TOKEN: ${{ inputs.github_token }}
+        BRANCH: ${{ inputs.output_branch }}
+      run: |
+        cd "$RUNNER_TEMP/fireworks"
+        git init -q -b "$BRANCH"
+        git config user.name "github-actions[bot]"
+        git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+        git add -A
+        git commit -qm "Update contribution fireworks"
+        git push -qf "https://x-access-token:${TOKEN}@github.com/${GITHUB_REPOSITORY}.git" "$BRANCH"
